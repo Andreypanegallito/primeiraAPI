@@ -1,54 +1,35 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
 using primeiraAPI.Models;
 using primeiraAPI.Repositories;
+using primeiraAPI.Services;
+using System.Data.Common;
 
 namespace primeiraAPI.Controllers.Users
 {
-    public class ListUsersController : Controller
+    [ApiController]
+    [Route("[controller]")]
+    public class ListUsersController : ControllerBase
     {
-        private readonly MySqlConnection _connection;
-        private readonly IUserRepository _userRepository;
+        private readonly UserService _userService;
 
-        public ListUsersController(MySqlConnection connection, IUserRepository userRepository)
+        public ListUsersController(UserService userService)
         {
-            _connection = connection;
-            _userRepository = userRepository;
+            _userService = userService;
         }
-
         // Implementa a rota `/users`
+        [HttpGet(Name = "users")]
         public IActionResult Index()
         {
-            // Execute uma consulta SQL usando a conexão
-            var command = new MySqlCommand("SELECT * FROM users", _connection);
-            var reader = command.ExecuteReader();
+            // Obtém a lista de usuários do `UserService`
+            var users = _userService.GetUsers();
 
-            // Itere sobre os resultados
-            var users = new List<User>();
-            while (reader.Read())
-            {
-                // Converte a string do campo "idUsuario" para um número inteiro
-                int idUsuario = int.Parse(reader["idUsuario"].ToString());
+            // Converta a lista de usuários em um JSON
+            var json = JsonConvert.SerializeObject(users);
 
-                // Cria um novo usuário com os dados da consulta
-                var user = new User
-                {
-                    idUsuario = idUsuario,
-                    nome = reader["nome"].ToString(),
-                    sobrenome = reader["sobrenome"].ToString(),
-                    email = reader["email"].ToString()
-                };
-
-                // Adiciona o usuário à lista de usuários
-                users.Add(user);
-            }
-
-            // Feche o leitor e a conexão
-            reader.Close();
-            _connection.Close();
-
-            // Retorne os usuários
-            return Ok(users);
+            // Retorne o JSON
+            return Ok(json);
         }
     }
 }
