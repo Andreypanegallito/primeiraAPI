@@ -1,5 +1,6 @@
 ﻿using MySql.Data.MySqlClient;
 using primeiraAPI.Models;
+using System.Data;
 using System.Data.Common;
 
 namespace primeiraAPI.Services
@@ -15,9 +16,14 @@ namespace primeiraAPI.Services
 
         public List<User> GetUsers()
         {
-            _connection.Open();
+            if (_connection.State == ConnectionState.Closed)
+            {
+                _connection.Open();
+            }
+
             // Execute a consulta SQL
-            var command = new MySqlCommand("SELECT * FROM usuarios", _connection);
+            var sql = "SELECT idUsuario, nome, sobrenome, username, email, DATE_FORMAT(data_criacao, ' % d -% m -% Y % H:% i:% s') as data_criacao, ativo, podeEditar FROM usuarios";
+            var command = new MySqlCommand(sql, _connection);
             var reader = command.ExecuteReader();
 
             // Itere sobre os resultados
@@ -42,6 +48,38 @@ namespace primeiraAPI.Services
             _connection.Close();
 
             return users;
+        }
+
+        public User GetUserById(int idUsuario)
+        {
+            if (_connection.State == ConnectionState.Closed)
+            {
+                _connection.Open();
+            }
+
+            // Execute a consulta SQL
+            var sql = "SELECT idUsuario, nome, sobrenome, username, email, DATE_FORMAT(data_criacao, '%d-%m-%Y %H:%i:%s') as data_criacao, ativo, podeEditar FROM usuarios WHERE idUsuario = @idUsuario";
+            var command = new MySqlCommand(sql, _connection);
+            command.Parameters.AddWithValue("@idUsuario", idUsuario);
+
+            var reader = command.ExecuteReader();
+
+            var user = new User();
+            if (reader.Read())
+            {
+                user.idUsuario = int.Parse(reader["idUsuario"].ToString());
+                user.nome = reader["nome"].ToString() +" "+ reader["sobrenome"].ToString();
+                user.username = reader["username"].ToString();
+                user.email = reader["email"].ToString();
+                user.data_criacao = reader["data_criacao"].ToString();
+                user.ativo = bool.TryParse(reader["ativo"].ToString(), out bool ativo);
+                user.podeEditar = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar);
+            };
+
+            reader.Close();
+            _connection.Close();
+
+            return user;
         }
     }
 }

@@ -9,5 +9,8 @@ namespace primeiraAPI.Models
         public string sobrenome { get; set; }
         public string username { get; set; }
         public string email { get; set; }
+        public string data_criacao { get; set; }
+        public Boolean ativo { get; set; }
+        public Boolean podeEditar { get; set; }
     }
 }
