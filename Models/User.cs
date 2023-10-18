@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Data;
+using MySql.Data.MySqlClient;
+
 
 namespace primeiraAPI.Models
 {
@@ -12,5 +15,12 @@ namespace primeiraAPI.Models
         public string data_criacao { get; set; }
         public Boolean ativo { get; set; }
         public Boolean podeEditar { get; set; }
+    }
+
+    public class LoginResponse
+    {
+        public DataRowState result { get; set; }
+        public string status { get; set; }
+        public string token { get; set; }
     }
 }

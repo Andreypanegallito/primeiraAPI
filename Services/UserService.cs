@@ -2,6 +2,13 @@
 using primeiraAPI.Models;
 using System.Data;
 using System.Data.Common;
+using System.Threading.Tasks;
+using BCrypt.Net;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Text;
+using Org.BouncyCastle.Crypto.Generators;
 
 namespace primeiraAPI.Services
 {
@@ -80,6 +87,82 @@ namespace primeiraAPI.Services
             _connection.Close();
 
             return user;
+        }
+        
+        public async Task<LoginResponse> AuthenticateUserAsync(string username, string password)
+        {
+            if (_connection.State == ConnectionState.Closed)
+            {
+                _connection.OpenAsync();
+            }
+
+            // Execute a consulta SQL
+            string sql = "SELECT * FROM usuarios WHERE username = @UserName";
+            using (MySqlCommand command = new MySqlCommand(sql, _connection))
+            {
+                command.Parameters.AddWithValue("@UserName", username);
+
+                using (MySqlDataReader reader = await command.ExecuteReaderAsync())
+                {
+                    if (reader.HasRows)
+                    {
+                        await reader.ReadAsync();
+
+                        string storedHashedPassword = reader["password"].ToString();
+                        bool passwordsMatch = BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
+
+                        if (passwordsMatch)
+                        {
+                            // Senha correta - gera um token JWT
+                            var claims = new[]
+                            {
+                            new Claim("userId", reader["idUsuario"].ToString()),
+                            new Claim("username", reader["username"].ToString()),
+                            new Claim("isAdmin", reader["isAdmin"].ToString()),
+                            new Claim("podeEditar", reader["podeEditar"].ToString())
+                        };
+
+                            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("SuaChaveSecretaJWT"));
+                            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                            var token = new JwtSecurityToken(
+                                claims: claims,
+                                expires: DateTime.Now.AddHours(1),
+                                signingCredentials: creds
+                            );
+
+                            var tokenHandler = new JwtSecurityTokenHandler();
+                            string jwtToken = tokenHandler.WriteToken(token);
+
+                            return new LoginResponse
+                            {
+                                result = reader as RowDataPacket,
+                                status = "Ok",
+                                token = jwtToken
+                            };
+                        }
+                        else
+                        {
+                            // Senha errada
+                            return new LoginResponse
+                            {
+                                result = null,
+                                status = "passErr",
+                                token = null
+                            };
+                        }
+                    }
+                    else
+                    {
+                        // Usuário não encontrado
+                        return new LoginResponse
+                        {
+                            result = null,
+                            status = "userErr",
+                            token = null
+                        };
+                    }
+                }
+            }
         }
     }
 }
