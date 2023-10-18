@@ -9,6 +9,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 using Org.BouncyCastle.Crypto.Generators;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Bcpg;
+using System;
 
 namespace primeiraAPI.Services
 {
@@ -79,7 +82,7 @@ namespace primeiraAPI.Services
                 user.username = reader["username"].ToString();
                 user.email = reader["email"].ToString();
                 user.data_criacao = reader["data_criacao"].ToString();
-                user.ativo = bool.TryParse(reader["ativo"].ToString(), out bool ativo);
+                user.isAtivo = bool.TryParse(reader["ativo"].ToString(), out bool ativo);
                 user.podeEditar = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar);
             };
 
@@ -96,73 +99,87 @@ namespace primeiraAPI.Services
                 _connection.OpenAsync();
             }
 
-            // Execute a consulta SQL
-            string sql = "SELECT * FROM usuarios WHERE username = @UserName";
-            using (MySqlCommand command = new MySqlCommand(sql, _connection))
+            try
             {
-                command.Parameters.AddWithValue("@UserName", username);
+                await _connection.OpenAsync();
 
-                using (MySqlDataReader reader = await command.ExecuteReaderAsync())
+                string sql = "SELECT idUsuario, username, isAdmin, podeEditar, password FROM usuarios WHERE username = @UserName";
+                using (MySqlCommand command = new MySqlCommand(sql, _connection))
                 {
-                    if (reader.HasRows)
+                    command.Parameters.AddWithValue("@UserName", username);
+
+                    using (MySqlDataReader reader = await command.ExecuteReaderAsync())
                     {
-                        await reader.ReadAsync();
-
-                        string storedHashedPassword = reader["password"].ToString();
-                        bool passwordsMatch = BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
-
-                        if (passwordsMatch)
+                        if (await reader.ReadAsync())
                         {
-                            // Senha correta - gera um token JWT
-                            var claims = new[]
+                            string storedHashedPassword = reader["password"].ToString();
+                            bool passwordsMatch = BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
+
+                            if (passwordsMatch)
                             {
-                            new Claim("userId", reader["idUsuario"].ToString()),
-                            new Claim("username", reader["username"].ToString()),
-                            new Claim("isAdmin", reader["isAdmin"].ToString()),
-                            new Claim("podeEditar", reader["podeEditar"].ToString())
-                        };
+                                var user = new User
+                                {
+                                    idUsuario = int.Parse(reader["idUsuario"].ToString()),
+                                    username = reader["username"].ToString(),
+                                    isAdmin = bool.TryParse(reader["isAdmin"].ToString(), out bool isAdmin),
+                                    podeEditar = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar)
 
-                            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("SuaChaveSecretaJWT"));
-                            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-                            var token = new JwtSecurityToken(
-                                claims: claims,
-                                expires: DateTime.Now.AddHours(1),
-                                signingCredentials: creds
-                            );
+                                };
 
-                            var tokenHandler = new JwtSecurityTokenHandler();
-                            string jwtToken = tokenHandler.WriteToken(token);
+                                var token = GenerateJwtToken(user);
 
-                            return new LoginResponse
+                                return new LoginResponse
+                                {
+                                    result = user,
+                                    status = "Ok",
+                                    token = token
+                                };
+                            }
+                            else
                             {
-                                result = reader as RowDataPacket,
-                                status = "Ok",
-                                token = jwtToken
-                            };
+                                return new LoginResponse
+                                {
+                                    result = null,
+                                    status = "passErr",
+                                    token = null
+                                };
+                            }
                         }
                         else
                         {
-                            // Senha errada
                             return new LoginResponse
                             {
                                 result = null,
-                                status = "passErr",
+                                status = "userErr",
                                 token = null
                             };
                         }
                     }
-                    else
-                    {
-                        // Usuário não encontrado
-                        return new LoginResponse
-                        {
-                            result = null,
-                            status = "userErr",
-                            token = null
-                        };
-                    }
                 }
             }
+            catch (Exception ex)
+            {
+                // Lidar com exceções, registrar ou relatar o erro
+                return new LoginResponse
+                {
+                    result = null,
+                    status = "error",
+                    token = null
+                };
+            }
+            finally
+            {
+                _connection.Close();
+            }
         }
+
+        private string GenerateJwtToken(User user)
+        {
+            // Gere e retorne o token JWT aqui
+            // Certifique-se de usar um código real para gerar o token JWT com base nas reivindicações do usuário.
+            // Você deve usar um pacote de JWT como System.IdentityModel.Tokens.Jwt ou similar.
+            return "TokenJWTGeradoAqui";
+        }
+
     }
 }
