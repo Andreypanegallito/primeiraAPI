@@ -12,6 +12,7 @@ using Org.BouncyCastle.Crypto.Generators;
 using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Bcpg;
 using System;
+using primeiraAPI.Services;
 
 namespace primeiraAPI.Services
 {
@@ -96,7 +97,7 @@ namespace primeiraAPI.Services
         {
             if (_connection.State == ConnectionState.Closed)
             {
-                _connection.OpenAsync();
+                await _connection.OpenAsync();
             }
 
             try
@@ -108,9 +109,9 @@ namespace primeiraAPI.Services
                 {
                     command.Parameters.AddWithValue("@UserName", username);
 
-                    using (MySqlDataReader reader = await command.ExecuteReaderAsync())
+                    using (DbDataReader dbReader = await command.ExecuteReaderAsync())
                     {
-                        if (await reader.ReadAsync())
+                        if (dbReader is MySqlDataReader reader)
                         {
                             string storedHashedPassword = reader["password"].ToString();
                             bool passwordsMatch = BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
@@ -126,7 +127,8 @@ namespace primeiraAPI.Services
 
                                 };
 
-                                var token = GenerateJwtToken(user);
+                                Token tokenGenerator = new Token();
+                                var token = tokenGenerator.GenerateJwtToken(user);
 
                                 return new LoginResponse
                                 {
@@ -159,7 +161,6 @@ namespace primeiraAPI.Services
             }
             catch (Exception ex)
             {
-                // Lidar com exceções, registrar ou relatar o erro
                 return new LoginResponse
                 {
                     result = null,
@@ -172,14 +173,5 @@ namespace primeiraAPI.Services
                 _connection.Close();
             }
         }
-
-        private string GenerateJwtToken(User user)
-        {
-            // Gere e retorne o token JWT aqui
-            // Certifique-se de usar um código real para gerar o token JWT com base nas reivindicações do usuário.
-            // Você deve usar um pacote de JWT como System.IdentityModel.Tokens.Jwt ou similar.
-            return "TokenJWTGeradoAqui";
-        }
-
     }
 }
