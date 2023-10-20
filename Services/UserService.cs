@@ -33,7 +33,7 @@ namespace primeiraAPI.Services
             }
 
             // Execute a consulta SQL
-            var sql = "SELECT idUsuario, nome, sobrenome, username, email, DATE_FORMAT(data_criacao, ' % d -% m -% Y % H:% i:% s') as data_criacao, ativo, podeEditar FROM usuarios";
+            var sql = "SELECT idUsuario, nome, sobrenome, username, email, DATE_FORMAT(data_criacao, ' % d -% m -% Y % H:% i:% s') as data_criacao, ativo, isCanEdit FROM usuarios";
             var command = new MySqlCommand(sql, _connection);
             var reader = command.ExecuteReader();
 
@@ -45,9 +45,11 @@ namespace primeiraAPI.Services
                 var user = new User
                 {
                     idUsuario = int.Parse(reader["idUsuario"].ToString()),
-                    nome = reader["nome"].ToString(),
-                    sobrenome = reader["sobrenome"].ToString(),
-                    email = reader["email"].ToString()
+                    nome = reader["nome"].ToString() + reader["sobrenome"].ToString(),
+                    email = reader["email"].ToString(),
+                    username = reader["username"].ToString(),
+                    creationDate = reader["data_criacao"].ToString()
+
                 };
 
                 // Adiciona o usuário à lista de usuários
@@ -79,12 +81,12 @@ namespace primeiraAPI.Services
             if (reader.Read())
             {
                 user.idUsuario = int.Parse(reader["idUsuario"].ToString());
-                user.nome = reader["nome"].ToString() +" "+ reader["sobrenome"].ToString();
+                user.nome = reader["nome"].ToString() + " " + reader["sobrenome"].ToString();
                 user.username = reader["username"].ToString();
                 user.email = reader["email"].ToString();
-                user.data_criacao = reader["data_criacao"].ToString();
-                user.isAtivo = bool.TryParse(reader["ativo"].ToString(), out bool ativo);
-                user.podeEditar = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar);
+                user.creationDate = reader["data_criacao"].ToString();
+                user.isActive = bool.TryParse(reader["ativo"].ToString(), out bool ativo);
+                user.isCanEdit = bool.TryParse(reader["isCanEdit"].ToString(), out bool podeEditar);
             };
 
             reader.Close();
@@ -92,17 +94,15 @@ namespace primeiraAPI.Services
 
             return user;
         }
-        
+
         public async Task<LoginResponse> AuthenticateUserAsync(string username, string password)
         {
-            if (_connection.State == ConnectionState.Closed)
-            {
-                await _connection.OpenAsync();
-            }
-
             try
             {
-                await _connection.OpenAsync();
+                if (_connection.State == ConnectionState.Closed)
+                {
+                    await _connection.OpenAsync();
+                }
 
                 string sql = "SELECT idUsuario, username, isAdmin, podeEditar, password FROM usuarios WHERE username = @UserName";
                 using (MySqlCommand command = new MySqlCommand(sql, _connection))
@@ -113,31 +113,42 @@ namespace primeiraAPI.Services
                     {
                         if (dbReader is MySqlDataReader reader)
                         {
-                            string storedHashedPassword = reader["password"].ToString();
-                            bool passwordsMatch = BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
-
-                            if (passwordsMatch)
+                            if (await reader.ReadAsync()) // Verifica se há registros
                             {
-                                var user = new User
+                                string storedHashedPassword = reader["password"].ToString();
+                                bool passwordsMatch = BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
+
+                                if (passwordsMatch)
                                 {
-                                    idUsuario = int.Parse(reader["idUsuario"].ToString()),
-                                    username = reader["username"].ToString(),
-                                    isAdmin = bool.TryParse(reader["isAdmin"].ToString(), out bool isAdmin),
-                                    podeEditar = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar)
+                                    var user = new User
+                                    {
+                                        idUsuario = int.Parse(reader["idUsuario"].ToString()),
+                                        username = reader["username"].ToString(),
+                                        isAdmin = bool.TryParse(reader["isAdmin"].ToString(), out bool isAdmin),
+                                        isCanEdit = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar)
 
-                                };
+                                    };
 
-                                Token tokenGenerator = new Token();
-                                var token = tokenGenerator.GenerateJwtToken(user);
+                                    Token tokenGenerator = new Token();
+                                    var token = tokenGenerator.GenerateJwtToken(user);
 
-                                return new LoginResponse
+                                    return new LoginResponse
+                                    {
+                                        result = user,
+                                        status = "Ok",
+                                        token = token
+                                    };
+                                }
+                                else
                                 {
-                                    result = user,
-                                    status = "Ok",
-                                    token = token
-                                };
-                            }
-                            else
+                                    return new LoginResponse
+                                    {
+                                        result = null,
+                                        status = "passErr",
+                                        token = null
+                                    };
+                                }
+                            }else
                             {
                                 return new LoginResponse
                                 {
@@ -161,10 +172,11 @@ namespace primeiraAPI.Services
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine(ex.Message);
                 return new LoginResponse
                 {
                     result = null,
-                    status = "error",
+                    status = ex.Message,
                     token = null
                 };
             }

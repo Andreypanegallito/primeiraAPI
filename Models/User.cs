@@ -9,13 +9,12 @@ namespace primeiraAPI.Models
     {
         public int idUsuario { get; set; }
         public string nome { get; set; }
-        public string sobrenome { get; set; }
         public string username { get; set; }
         public string email { get; set; }
-        public string data_criacao { get; set; }
-        public Boolean isAtivo { get; set; }
+        public string creationDate { get; set; }
+        public Boolean isActive { get; set; }
         public Boolean isAdmin { get; set; }
-        public Boolean podeEditar { get; set; }
+        public Boolean isCanEdit { get; set; }
     }
 
     public class LoginResponse
@@ -24,4 +23,11 @@ namespace primeiraAPI.Models
         public string status { get; set; }
         public string? token { get; set; }
     }
+
+    public class UserLoginModel 
+    {
+        public string usernameLogin { get; set; }
+        public string passwordLogin { get; set; }
+    }
+
 }
