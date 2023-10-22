@@ -104,7 +104,7 @@ namespace primeiraAPI.Services
                     await _connection.OpenAsync();
                 }
 
-                string sql = "SELECT idUsuario, username, isAdmin, podeEditar, password FROM usuarios WHERE username = @UserName";
+                string sql = "SELECT idUsuario, username, password, ativo, isAdmin, podeEditar FROM usuarios WHERE username = @UserName";
                 using (MySqlCommand command = new MySqlCommand(sql, _connection))
                 {
                     command.Parameters.AddWithValue("@UserName", username);
@@ -117,38 +117,52 @@ namespace primeiraAPI.Services
                             {
                                 string storedHashedPassword = reader["password"].ToString();
                                 bool passwordsMatch = BCrypt.Net.BCrypt.Verify(password, storedHashedPassword);
+                                var isUserActive = bool.TryParse(reader["ativo"].ToString(), out bool ativo);
 
-                                if (passwordsMatch)
+                                if (isUserActive)
                                 {
-                                    var user = new User
+                                    if (passwordsMatch)
                                     {
-                                        idUsuario = int.Parse(reader["idUsuario"].ToString()),
-                                        username = reader["username"].ToString(),
-                                        isAdmin = bool.TryParse(reader["isAdmin"].ToString(), out bool isAdmin),
-                                        isCanEdit = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar)
+                                        var user = new User
+                                        {
+                                            idUsuario = int.Parse(reader["idUsuario"].ToString()),
+                                            username = reader["username"].ToString(),
+                                            isAdmin = bool.TryParse(reader["isAdmin"].ToString(), out bool isAdmin),
+                                            isCanEdit = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar)
 
-                                    };
+                                        };
 
-                                    Token tokenGenerator = new Token();
-                                    var token = tokenGenerator.GenerateJwtToken(user);
+                                        Token tokenGenerator = new Token();
+                                        var token = tokenGenerator.GenerateJwtToken(user);
 
-                                    return new LoginResponse
+                                        return new LoginResponse
+                                        {
+                                            result = user,
+                                            status = "Ok",
+                                            token = token
+                                        };
+                                    }
+                                    else
                                     {
-                                        result = user,
-                                        status = "Ok",
-                                        token = token
-                                    };
-                                }
-                                else
+                                        return new LoginResponse
+                                        {
+                                            result = null,
+                                            status = "passErr",
+                                            token = null
+                                        };
+                                    }
+                                } else
                                 {
                                     return new LoginResponse
                                     {
                                         result = null,
-                                        status = "passErr",
+                                        status = "userInactive",
                                         token = null
                                     };
                                 }
-                            }else
+
+                            }
+                            else
                             {
                                 return new LoginResponse
                                 {
