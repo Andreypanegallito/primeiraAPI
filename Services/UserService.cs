@@ -132,8 +132,8 @@ namespace primeiraAPI.Services
 
                                         };
 
-                                        Token tokenGenerator = new Token();
-                                        var token = tokenGenerator.GenerateJwtToken(user);
+                                        var tokenGenerator = new Token();
+                                        var token = await tokenGenerator.GenerateToken(user.idUsuario);
 
                                         return new LoginResponse
                                         {
