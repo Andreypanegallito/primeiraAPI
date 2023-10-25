@@ -128,8 +128,8 @@ namespace primeiraAPI.Services
                                             idUsuario = int.Parse(reader["idUsuario"].ToString()),
                                             username = reader["username"].ToString(),
                                             isAdmin = bool.TryParse(reader["isAdmin"].ToString(), out bool isAdmin),
-                                            isCanEdit = bool.TryParse(reader["podeEditar"].ToString(), out bool podeEditar)
-
+                                            isCanEdit = bool.TryParse(reader["podeEditar"].ToString(), out bool isCanEdit),
+                                            isActive = bool.TryParse(reader["ativo"].ToString(), out bool isActive)
                                         };
 
                                         var tokenGenerator = new Token();

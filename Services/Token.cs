@@ -2,37 +2,30 @@
 using System.Security.Cryptography.X509Certificates;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Security.Claims;
 
 namespace primeiraAPI.Services
 {
     internal class Token
     {
-        public string GenerateToken(int userId)
+        public async Task<string> GenerateToken(int userId)
         {
-            // Cria um objeto JwtSecurityTokenHandler.
-            var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(Key.Secret);
+            var tokenConfig = new SecurityTokenDescriptor
+            {
+                Subject = new System.Security.Claims.ClaimsIdentity(new Claim[]
+                {
+                    new Claim("usuarioId", userId.ToString()),
+                }),
+                Expires = DateTime.UtcNow.AddHours(1),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+            };
 
-            // Cria um objeto JwtBuilder.
-            var jwtBuilder = new JwtBuilder(jwtSecurityTokenHandler);
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.CreateToken(tokenConfig);
+            var tokenString = tokenHandler.WriteToken(token);
 
-            // Adiciona o claim userId ao token.
-            jwtBuilder.Claims.Add("userId", userId);
-
-            // Adiciona o claim issuer ao token.
-            jwtBuilder.Claims.Add("issuer", "https://www.example.com");
-
-            // Adiciona o claim audience ao token.
-            jwtBuilder.Claims.Add("audience", "https://api.example.com");
-
-            // Assina o token com uma chave secreta.
-            var key = Encoding.UTF8.GetBytes("secret");
-            jwtBuilder.Sign(new JwtSignatureAlgorithm("RS256"), new X509Certificate2("path/to/certificate.pfx", "password"));
-
-            // Converte o token em uma string.
-            var token = jwtBuilder.SerializeToString();
-
-            // Retorna o token.
-            return token;
+            return tokenString;
         }
     }
 }
