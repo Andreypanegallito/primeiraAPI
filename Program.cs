@@ -8,13 +8,16 @@ using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using primeiraAPI;
+using System.Configuration;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddSingleton<UserService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<Token>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -57,6 +60,9 @@ builder.Services.AddSingleton<MySqlConnection>(connection =>
 
 builder.Services.Configure<MySettingsModel>(builder.Configuration.GetSection("MySettings"));
 
+var settings = builder.Configuration.GetSection("MySettings").Get<MySettingsModel>();
+var key = Encoding.ASCII.GetBytes(settings.SecretKey);
+
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -73,6 +79,7 @@ builder.Services.AddAuthentication(x =>
         ValidateAudience = false
     };
 });
+
 
 var app = builder.Build();
 

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace primeiraAPI.Services
 {
-    internal class Token
+    public class Token
     {
 
         private readonly MySettingsModel _settings;

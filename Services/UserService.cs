@@ -19,13 +19,13 @@ namespace primeiraAPI.Services
     public class UserService
     {
         private readonly MySqlConnection _connection;
-        private readonly MySettingsModel _settings;
+        private readonly Token _token;
 
 
-        public UserService(MySqlConnection connection, MySettingsModel settings)
+        public UserService(MySqlConnection connection, Token token)
         {
             _connection = connection;
-            _settings = settings;
+            _token = token;
         }
 
         public List<User> GetUsers()
@@ -135,8 +135,7 @@ namespace primeiraAPI.Services
                                             isActive = bool.TryParse(reader["ativo"].ToString(), out bool isActive)
                                         };
 
-                                        var tokenGenerator = new Token();
-                                        var token = await tokenGenerator.GenerateToken(user.idUsuario);
+                                        var token = await _token.GenerateToken(user.idUsuario);
 
                                         return new LoginResponse
                                         {
