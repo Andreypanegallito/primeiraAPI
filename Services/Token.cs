@@ -3,14 +3,23 @@ using System.Security.Cryptography.X509Certificates;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Security.Claims;
+using Microsoft.Extensions.Options;
 
 namespace primeiraAPI.Services
 {
     internal class Token
     {
+
+        private readonly MySettingsModel _settings;
+
+        public Token(IOptions<MySettingsModel> settings)
+        {
+            _settings = settings.Value;
+        }
+
         public async Task<string> GenerateToken(int userId)
         {
-            var key = Encoding.ASCII.GetBytes(Key.Secret);
+            var key = Encoding.ASCII.GetBytes(_settings.SecretKey);
             var tokenConfig = new SecurityTokenDescriptor
             {
                 Subject = new System.Security.Claims.ClaimsIdentity(new Claim[]

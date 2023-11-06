@@ -19,10 +19,13 @@ namespace primeiraAPI.Services
     public class UserService
     {
         private readonly MySqlConnection _connection;
+        private readonly MySettingsModel _settings;
 
-        public UserService(MySqlConnection connection)
+
+        public UserService(MySqlConnection connection, MySettingsModel settings)
         {
             _connection = connection;
+            _settings = settings;
         }
 
         public List<User> GetUsers()

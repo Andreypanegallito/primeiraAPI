@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using primeiraAPI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,7 +55,7 @@ builder.Services.AddSingleton<MySqlConnection>(connection =>
     return new MySqlConnection(config);
 });
 
-var key = Encoding.ASCII.GetBytes(primeiraAPI.Key.Secret);
+builder.Services.Configure<MySettingsModel>(builder.Configuration.GetSection("MySettings"));
 
 builder.Services.AddAuthentication(x =>
 {
